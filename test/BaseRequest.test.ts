@@ -1,3 +1,4 @@
+import qs from 'qs'
 import { APIGatewayEvent } from 'aws-lambda'
 import { mergeBody, BaseRequest } from '../src/BaseRequest'
 
@@ -12,11 +13,37 @@ describe('mergeBody', () => {
     expect(body).toEqual(data)
   })
 
-  it('POST', () => {
+  it('POST - body', () => {
     const data = { name: 'foo' }
     const event: Partial<APIGatewayEvent> = {
       httpMethod: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+    const body = mergeBody(event as APIGatewayEvent)
+    expect(body).toEqual(data)
+  })
+
+  it('POST - form', () => {
+    const data = { name: 'foo' }
+    const event: Partial<APIGatewayEvent> = {
+      httpMethod: 'POST',
+      body: qs.stringify(data),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    }
+    const body = mergeBody(event as APIGatewayEvent)
+    expect(body).toEqual(data)
+  })
+
+  it('path parameters', () => {
+    const data = { name: 'foo' }
+    const event: Partial<APIGatewayEvent> = {
+      httpMethod: 'GET',
+      pathParameters: data
     }
     const body = mergeBody(event as APIGatewayEvent)
     expect(body).toEqual(data)

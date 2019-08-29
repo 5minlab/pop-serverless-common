@@ -1,22 +1,59 @@
 import { APIGatewayEvent } from 'aws-lambda'
+import qs from 'qs'
+
+type Body = { [key: string]: any }
+
+function extractContentType(event: APIGatewayEvent) {
+  const contentType = event.headers ? event.headers['Content-Type'] : undefined
+  return contentType
+}
+
+function extractPostBody(event: APIGatewayEvent): Body | undefined {
+  const contentType = extractContentType(event)
+  if (event.body && contentType === 'application/json') {
+    const body = JSON.parse(event.body)
+    return body
+  }
+  return undefined
+}
+
+function extractPostForm(event: APIGatewayEvent): Body | undefined {
+  const contentType = extractContentType(event)
+  if (event.body && contentType === 'application/x-www-form-urlencoded') {
+    const body = qs.parse(event.body)
+    return body
+  }
+  return undefined
+}
+
+function extractQueryString(event: APIGatewayEvent): Body | undefined {
+  if (event.queryStringParameters) {
+    return { ...event.queryStringParameters }
+  }
+  return undefined
+}
+
+function extractPathParameters(event: APIGatewayEvent): Body | undefined {
+  if (event.pathParameters) {
+    return { ...event.pathParameters }
+  }
+  return undefined
+}
 
 export function mergeBody(event: APIGatewayEvent) {
-  let obj: { [key: string]: any } = {}
+  const bodyList = [
+    extractPostBody(event),
+    extractPostForm(event),
+    extractQueryString(event),
+    extractPathParameters(event)
+  ]
 
-  // POST
-  if (event.body) {
-    const body = JSON.parse(event.body)
-    obj = { ...obj, ...body }
-  }
-
-  // GET
-  if (event.queryStringParameters) {
-    for (const key of Object.keys(event.queryStringParameters)) {
-      const val = event.queryStringParameters[key]
-      obj[key] = val
+  let obj: Body = {}
+  for (const body of bodyList) {
+    if (body) {
+      obj = Object.assign(obj, body)
     }
   }
-
   return obj
 }
 
